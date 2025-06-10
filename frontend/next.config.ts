@@ -1,7 +1,18 @@
 import { withSentryConfig } from '@sentry/nextjs';
 import type { NextConfig } from 'next';
 
+const isElectronBuild = process.env.ELECTRON_BUILD === 'true';
+
 let nextConfig: NextConfig = {
+  // Electron-specific configuration
+  ...(isElectronBuild && {
+    output: 'export',
+    distDir: 'out',
+    trailingSlash: true,
+    images: {
+      unoptimized: true,
+    },
+  }),
   webpack: (config) => {
     // This rule prevents issues with pdf.js and canvas
     config.externals = [...(config.externals || []), { canvas: 'canvas' }];
@@ -16,7 +27,8 @@ let nextConfig: NextConfig = {
   },
 };
 
-if (process.env.NEXT_PUBLIC_VERCEL_ENV === 'production') {
+// Only add Sentry in production web builds, not Electron builds
+if (process.env.NEXT_PUBLIC_VERCEL_ENV === 'production' && !isElectronBuild) {
   nextConfig = withSentryConfig(nextConfig, {
     org: 'kortix-ai',
     project: 'suna-nextjs',
